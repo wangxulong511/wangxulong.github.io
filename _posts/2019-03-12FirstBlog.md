@@ -2,7 +2,7 @@
 layout:     post                    # 使用的布局（不需要改）
 title:      My First Post               # 标题 
 subtitle:   Hello World, Hello Blog #副标题
-date:       2017-02-06              # 时间
+date:       2019-03-12              # 时间
 author:     静观知心                 # 作者
 header-img: img/post-bg-2019.jpg    #这篇文章标题背景图片
 catalog: true                       # 是否归档
