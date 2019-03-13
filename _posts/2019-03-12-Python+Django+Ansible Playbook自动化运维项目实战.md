@@ -2,8 +2,8 @@
 https://www.jianshu.com/p/e099767c34cb
 
 ## 前言 
-转自 《Linux就该这么学》作者刘遄老师
->https://www.linuxprobe.com/chapter-00.html
+转自 [《Linux就该这么学》](https://www.linuxprobe.com/chapter-00.html)作者刘遄老师
+
 **请不要忘记自己最初的梦想。十年后的你，一定会感激现在拼命努力学习的自己**
 
 ## 稻盛和夫《活法》
