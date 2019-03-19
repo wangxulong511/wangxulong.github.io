@@ -3,7 +3,7 @@
 ## step 1
 
  使用explain extend 查看执行计划， 5.6后可以加参数 explain format=json xxx 输出json格式的信息
- 使用explain 查看执行计划， 5.7 之后直接包含了 Extra
+ 使用explain 查看执行计划， 5.7 之后直接包含了 filter
  
  查看优化器改写后的SQL
  explain select count(*) from table t ;
@@ -221,7 +221,7 @@ select count(*) from t_audit_operate_log where Fcreate_time>=1407254400 and Fcre
 
 4.select * from information_schema.optimizer_trace\G;
 
- 
+ ```
 
 [plain] view plain copy 
  
@@ -430,5 +430,5 @@ select count(*) from t_audit_operate_log where Fcreate_time>=1407254400 and Fcre
     }\  
   ] /* steps */\  
   
-  
+  ```
 
