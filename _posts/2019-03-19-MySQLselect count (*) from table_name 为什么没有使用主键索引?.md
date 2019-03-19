@@ -64,6 +64,8 @@ primary key 是 clustered index，是所有索引中最大的一个。在这个�
 ## 结论
 在 InnoDB 存储引擎中， primary key 是 clustered index（最大的索引），使用它来处理 select count(*) from table_name 最慢。
 
+>
+
 ## MySQL中查找索引信息
 
 在所在的schema中查找中的状态信息
@@ -79,8 +81,8 @@ show table status where name ='tablename';
 
 ```
 查看MySQL表中索引信息
-```
-MySQL索引统计信息更新相关的参数
+
+## MySQL索引统计信息更新相关的参数
  
 
 MySQL统计信息相关的参数：
@@ -96,11 +98,7 @@ MySQL统计信息相关的参数：
 　　　　或者INFORMATION_SCHEMA.STATISTICS 系统表的时候，
 　　　　更新费持久化统计信息（类似于ANALYZE TABLE），innodb_stats_on_metadata不管打开还是关闭，都不影响持久化存储统计信息的索引
 　　　　某个索引的统计信息更新时间参考mysql.innodb_index_stats这个系统表
-
-某个索引的统计信息更新时间参考mysql.innodb_index_stats这个系统表
-select * 
-from mysql.innodb_index_stats 
-where table_name = 'teststatistics';
+       
 
 　　2. innodb_stats_auto_recalc
 
@@ -135,7 +133,233 @@ where table_name = 'teststatistics';
 
 统计信息更新测试1：打开innodb_stats_auto_recalc的情况下，统计信息会在触发其更新阈值后自动更新
 
- 
-```
 
 >select * from mysql.innodb_index_stats where table_name = 'tablename';
+
+在看看到CSDN的一个博客帖子后,心中豁然开朗,虽然是**SQL Server**但是对聚集索引的理解更深入一些
+![通过非聚集索引让select count(*) from 的查询速度提高几十倍、甚至千倍](https://blog.csdn.net/sqlserverdiscovery/article/details/12646371)
+以下内容转自csdn*不想长大啊*
+
+通过非聚集索引，可以显著提升count(*)查询的性能。
+
+有的人可能会说，这个count(*)能用上索引吗，这个count(*)应该是通过表扫描来一个一个的统计，索引有用吗？
+
+
+
+不错，一般的查询，如果用索引查找，也就是用Index Seek了，查询就会很快。
+
+ 
+
+之所以快，是由于查询所需要访问的数据只占整个表的很小一部分，如果访问的数据多了，那反而不如通过表扫描来的更快，因为扫描用的是顺序IO，效率更高，比运用随机IO访问大量数据的效率高很多。
+
+ 
+
+相应的，如果只需要访问少量数据，那么索引查找的效率远高于表扫描，因为通过随机IO来访问少量数据的效率远高于通过顺序IO来访问少量数据，之所以扫描的效率较低是由于扫描访问了很多不需要的数据。
+
+ 
+
+那么，通过非聚集索引，提升select count(*) from 的查询速度的本质在于，非聚集索引所占空间的大小往往，远小于聚集索引或堆表所占用的空间大小；
+
+同样的，表中占用较少字节的字段的非聚集索引，对于速度的提升效果，也要远大于，占用较多字节的字段的非聚集索引，因为占用字节少，那么索引占用的空间也少，同样是扫描，只需要更少的时间，对硬盘的访问次数也更少，那么速度就会更快了。
+
+
+
+下面通过一个实验，来说明非聚集索引为什么能提高count（*）的查询速度。
+
+
+
+1、建表，插入数据
+
+if OBJECT_ID('test') is not null
+   drop table test
+go
+ 
+create table test
+(
+id int identity(1,1),
+vid int ,
+v varchar(600),
+constraint pk_test_id primary key (id)
+)
+go
+ 
+ 
+ 
+insert into test(vid,v)
+select 1,REPLICATE('a',600) union all
+select 2,REPLICATE('b',600) union all
+select 3,REPLICATE('c',600) union all
+select 4,REPLICATE('d',600) union all
+select 5,REPLICATE('e',600) union all
+select 6,REPLICATE('f',600) union all
+select 7,REPLICATE('g',600) union all
+select 8,REPLICATE('h',600) union all
+select 9,REPLICATE('i',600) union all
+select 10,REPLICATE('j',600)
+go
+ 
+ 
+--select POWER(2,18) * 10
+--2621440条数据
+begin tran
+	insert into test(vid,v)
+	select vid,v
+	from test
+commit
+go 18
+ 
+ 
+--建立非聚集索引
+create index idx_test_vid on test(vid)
+ 
+
+
+2、查看采用聚集索引和非聚集索引后，查询的资源消耗
+
+--输出详细的IO和时间(cpu、流逝的时间)上的开销信息
+set statistics io on
+set statistics time on
+ 
+ 
+/* 采用聚集索引
+SQL Server 分析和编译时间: 
+   CPU 时间 = 0 毫秒，占用时间 = 0 毫秒。
+(1 行受影响)
+表 'test'。扫描计数 5，逻辑读取 206147 次，物理读取 0 次，预读 0 次，lob 逻辑读取 0 次，lob 物理读取 0 次，lob 预读 0 次。
+ SQL Server 执行时间:
+   CPU 时间 = 921 毫秒，占用时间 = 277 毫秒。
+*/
+select COUNT(*)
+from test with(index (pk_test_id))
+ 
+ 
+ 
+/*采用非聚集索引
+SQL Server 分析和编译时间: 
+   CPU 时间 = 0 毫秒，占用时间 = 1 毫秒。
+(1 行受影响)
+表 'test'。扫描计数 5，逻辑读取 4608 次，物理读取 0 次，预读 0 次，lob 逻辑读取 0 次，lob 物理读取 0 次，lob 预读 0 次。
+ SQL Server 执行时间:
+   CPU 时间 = 327 毫秒，占用时间 = 137 毫秒。
+*/
+select count(*)
+from test with(index (idx_test_vid))
+
+
+3、从上面的开销可以看出：
+
+a、通过聚集索引来查询count(*)时，逻辑读取次数206147次，执行时间和占用时间分别是921毫秒和277毫秒，从执行计划中看出，其查询开销是96%。
+
+b、非聚集索引的逻辑读取次数是4608次，而执行时间和占用时间是327毫秒和137毫秒，查询开销是4%。
+
+c、表扫描的逻辑读取次数是201650次，执行时间和占用时间是765毫秒和233毫秒。
+
+
+
+这里需要注意的是，由于两个执行计划都采用了并行计划，导致了执行时间远大于占用时间，这主要是因为执行时间算的是多个cpu时间的总和，我的笔记本电脑有4个cpu，那么921/4 大概就是230毫秒左右，也就是每个cpu花在执行上的时间大概是230毫秒左右，和277毫秒就差不多了。
+
+
+
+从这些开销信息可以看出，非聚集索引的逻辑读取次数是聚集索引的50分之一，执行时间是聚集索引的2-3分之一左右，查询开销上是聚集索引的24分之一。
+
+
+
+很有意思的是，表扫描的逻辑读取次数要比聚集索引的要少4497次，这个逻辑读取次数201650，是可以查到，看下面的代码：
+之所以能查到，是因为全表扫描，无非就是把表中所有的页，都扫描一遍，所以扫描的次数正好是表中的页数201650.
+
+4、那为什么非聚集索引来查询count(*) 的效率是最高的呢？
+
+其实上面分别提到了，通过聚集索引、非聚集索引、表扫描，3种方式来查询，从执行计划可以看出来，3种方式都是扫描，那为什么非聚集索引效率最高？
+
+其实，很简单，谁扫描的次数少，也就是扫描的页数少，那谁的效率当然就高了。
+
+
+
+看下面的代码，就明白了：
+
+
+use master
+go
+ 
+--index_id为1表示聚集索引
+select index_id,
+       index_type_desc,
+       alloc_unit_type_desc,
+       page_count                --201650
+from sys.dm_db_index_physical_stats
+(
+db_id('wcc'),object_id('wcc.dbo.test'),1,null,'detailed'
+)d
+where index_level = 0  --只取level为0的,也就是页子级别
+ 
+/*
+index_id	index_type_desc		alloc_unit_type_desc   page_count
+1	        CLUSTERED INDEX	    IN_ROW_DATA	           201650
+*/
+ 
+ 
+ 
+--index_id为2的,表示非聚集索引
+select index_id,
+       index_type_desc,
+       alloc_unit_type_desc,
+       page_count               --4538
+from sys.dm_db_index_physical_stats
+(
+db_id('wcc'),object_id('wcc.dbo.test'),2,null,'detailed'
+)d
+where index_level = 0
+ 
+/*
+index_id	index_type_desc		alloc_unit_type_desc	page_count
+2			NONCLUSTERED INDEX	IN_ROW_DATA				4538
+*/
+
+聚集索引的叶子节点的页数是201650，而非聚集索引的 叶子节点的页数是4538，差了近50倍，而在没有索引的时候，采用表扫描时，叶子节点的页数是201650，与聚集索引一样。
+
+
+效率的差异不仅在与逻辑读取次数，因为逻辑读取效率本身是很高的，是直接在内存中读取的，但SQL Server的代码需要扫描内存中的数据201650次，也就是循环201650次，可想而知，cpu的使用率会暴涨，会严重影响SQL Server处理正常的请求。
+
+
+
+假设这些要读取的页面不在内存中，那问题就大了，需要把硬盘上的数据读到内存，关键是要读201650页，而通过索引只需要读取4538次，效率的差距就会更大。
+
+
+
+另外，实验中只是200多万条数据，如果实际生产环境中有2亿条记录呢？到时候，效率的差距会从几十倍上升到几百倍、几千倍。
+
+ 
+
+5、那是不是只要是非聚集索引，都能提高select count(*) from查询的效率吗？
+
+这个问题是由下面的网友提出的问题，而想到的一个问题。
+
+如果按照v列来建索引，而v列的数据类型是varchar(600)，所以这个新建的索引，占用的页数肯定是非常多的，应该仅次于聚集索引的201650页，那么完成索引扫描的开销肯定大于，按vid列建立的非聚集索引，而vid的数据类型是int。
+
+所以，不是只要是非聚集索引，就能提高查询效率的。
+
+ 
+
+总结一下：
+
+执行select count(*) from查询的时候，要进行扫描，有人可能会说，扫描性能很差呀，还能提高性能？那么，难道用索引查找吗？这样性能只会更差。
+
+这里想说的是，没有最好的技术，只有最适合的技术，要想提高这种select count(*) from查询的性能，那就只能用扫描。
+
+这里，要提高效率的关键，就是减少要扫描的页数，而按照占用字节数少的字段，来建立非聚集索引，那么这个非聚集索引所占用的页数，远远少于聚集索引、按占用字节数较多的列建立的非聚集索引，所占用的页数，这样就能提高性能了。
+
+
+
+最后，有两个关于索引的帖子，不错：
+
+
+两个问题：1，（聚集或者非聚集的）索引页会不会出现也拆分；2，非聚集索引存储时又没排序：
+
+http://bbs.csdn.net/topics/390594730
+
+
+
+继续：非聚集索引行在存储索引键时确实是排序了的，用事实说话，理论+实践：
+
+http://bbs.csdn.net/topics/390595949
+
