@@ -1,4 +1,4 @@
-# select count (*) from table_name 为什么没有使用主键索引?
+# MySQL select count (*) from table_name 为什么没有使用主键索引?
 
 由于表中的数据已经有2000多万,在使用select count(*) 查询时，使用explain 查看SQL语句，执行计划中显示使用的**普通索引**，百思不得其解。
 
