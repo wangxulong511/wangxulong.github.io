@@ -433,4 +433,10 @@ select count(*) from t_audit_operate_log where Fcreate_time>=1407254400 and Fcre
   ] /* steps */\  
   
   ```
+  
+  四 问题的解决方式
+
+遇到单表上有多个索引的时候,在MySQL5.6.20版本之前的版本,需要人工强制使用索引,以达到最好的效果.
+
+分类: Mysql
 
