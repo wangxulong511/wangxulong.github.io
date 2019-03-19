@@ -6,8 +6,8 @@
  使用explain 查看执行计划， 5.7 之后直接包含了 filter
  
  查看优化器改写后的SQL
- explain select count(*) from table t ;
- show warnings;
+ explain select count(*) from table t ;  
+ show warnings;  
  
 ##　step 2 
 
