@@ -137,7 +137,8 @@ MySQL统计信息相关的参数：
 >select * from mysql.innodb_index_stats where table_name = 'tablename';
 
 在看看到CSDN的一个博客帖子后,心中豁然开朗,虽然是**SQL Server**但是对聚集索引的理解更深入一些
-![通过非聚集索引让select count(*) from 的查询速度提高几十倍、甚至千倍](https://blog.csdn.net/sqlserverdiscovery/article/details/12646371)
+
+## [通过非聚集索引让select count(*) from 的查询速度提高几十倍、甚至千倍](https://blog.csdn.net/sqlserverdiscovery/article/details/12646371)
 以下内容转自csdn*不想长大啊*
 
 通过非聚集索引，可以显著提升count(*)查询的性能。
