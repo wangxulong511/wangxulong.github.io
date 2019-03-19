@@ -3,9 +3,11 @@
 ## step 1
 
  使用explain extend 查看执行计划， 5.6后可以加参数 explain format=json xxx 输出json格式的信息
+ 5.7之前 explain extend  select count(*) from table t;  
+ 5.7 explain select count(*) from table t;  
  使用explain 查看执行计划， 5.7 之后直接包含了 filter
  
- 查看优化器改写后的SQL
+ 查看优化器改写后的SQL  
  explain select count(*) from table t ;  
  show warnings;  
  
