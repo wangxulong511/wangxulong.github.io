@@ -29,7 +29,7 @@ tmpdir=/tmp:/data/tmp
 +-------------------+----------------+
 | innodb_tmpdir     |                |
 | slave_load_tmpdir | /tmp           |
-| tmpdir            | **/tmp:/data/tmp** |
+| tmpdir            | /tmp:/data/tmp |
 +-------------------+----------------+
 3 rows in set (0.00 sec)
 
