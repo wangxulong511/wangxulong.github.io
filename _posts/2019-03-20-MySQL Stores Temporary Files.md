@@ -1,6 +1,7 @@
 # Where MySQL Stores Temporary Files
 MySQL 临时文件的作用
-临时文件可以多路径使用不通的磁盘设备    
+临时文件可以多路径使用不通的磁盘设备,目的是避免单个磁盘IO瓶颈导致临时表文件排序SQL执行慢 
+
  Linux以冒号（:）分割   
  以下是MySQL配置文件tmpdir 参数，此 参数是一个静态文件参数需要重启MySQL服务器后生效  
  ```
@@ -55,3 +56,4 @@ mysqld    33398     mysql   36u   REG  253,0        0     0 6291459 /tmp/ibALI53
 
 MySQL 5.7官方手册
 [Where MySQL Stores Temporary Files](https://dev.mysql.com/doc/refman/5.7/en/temporary-files.html)
+[MySQL中的内部临时表使用](https://dev.mysql.com/doc/refman/5.7/en/internal-temporary-tables.html)
