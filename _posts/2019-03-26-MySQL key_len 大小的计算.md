@@ -1,14 +1,14 @@
 #  MySQL key_len 大小的计算
 
-![MySQL key_len 大小的计算](https://www.cnblogs.com/zhoujinyi/p/3784450.html)  
+[MySQL key_len 大小的计算](https://www.cnblogs.com/zhoujinyi/p/3784450.html)  
 
 背景：
 
-      当用Explain查看SQL的执行计划时，里面有列显示了 key_len 的值，根据这个值可以判断索引的长度，在组合索引里面可以更清楚的了解到了哪部分字段使用到了索引。
+   当用Explain查看SQL的执行计划时，里面有列显示了 key_len 的值，根据这个值可以判断索引的长度，在组合索引里面可以更清楚的了解到了哪部分字段使用到了索引。
 
 环境：
+```
 
-按 Ctrl+C 复制代码
 CREATE TABLE `tmp_0612` (
   `id` int(11) NOT NULL,
   `name` varchar(10) DEFAULT NULL,
@@ -131,12 +131,12 @@ explain select * from tmp_0612 where age = 11;
 +----+-------------+----------+------+---------------+---------+---------+-------+------+-------+
 
 int 是占4个字符的，上面key_len的也是符合预期。关于组合索引的，可以自己去测试玩。
-
+```
 总结：
 
-      变长字段需要额外的2个字节，固定长度字段不需要额外的字节。而null都需要1个字节的额外空间，所以以前有个说法：索引字段最好不要为NULL，因为NULL让统计更加复杂，并且需要额外一个字节的存储空间。
+   变长字段需要额外的2个字节，固定长度字段不需要额外的字节。而null都需要1个字节的额外空间，所以以前有个说法：索引字段最好不要为NULL，因为NULL让统计更加复杂，并且需要额外一个字节的存储空间。
 
-复制代码
+
 key_len的长度计算公式：
 
 varchr(10)变长字段且允许NULL      : 10*(Character Set：utf8=3,gbk=2,latin1=1)+1(NULL)+2(变长字段)
