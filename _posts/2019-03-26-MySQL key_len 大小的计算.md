@@ -146,3 +146,5 @@ varchr(10)变长字段且不允许NULL    : 10*(Character Set：utf8=3,gbk=2,lat
 char(10)固定字段且允许NULL        : 10*(Character Set：utf8=3,gbk=2,latin1=1)+1(NULL)
 char(10)固定字段且不允许NULL        : 10*(Character Set：utf8=3,gbk=2,latin1=1)
 ```
+
+[MySQL 性能优化神器 Explain 使用分析](https://segmentfault.com/a/1190000008131735#articleHeader10)
