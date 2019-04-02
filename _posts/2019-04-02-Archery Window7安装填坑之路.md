@@ -11,7 +11,13 @@ git clone https://github.com/hhyo/Archery.git
 pip3 install -r requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/
 
 安装mysqlclient时遇到的错误 
+microsoft visual c++ 14.0 is required
+
 ```
+需要安装
+Visual C++ 2015 Build Tools
+百度云archery依赖包
+
 安装 MySQL Connector/Python (Archived Versions)  
 https://downloads.mysql.com/archives/c-python/
 
@@ -19,7 +25,13 @@ https://downloads.mysql.com/archives/c-python/
 安装阿里云rds模块报错  
 
 ```
-pip install python-ldap==3.2.0 报错如下：
+安装 pycrypto 
+pycrypto安装出错的问题 intmax_t C:\Program Files (x86)\Windows Kits\10\include\10.0.10240.0\ucrt\inttypes.  
+解决地址： 
+https://wangxulong511.github.io/2019/03/25/python3.6%E5%AE%89%E8%A3%85pycrypto%E6%8A%A5%E9%94%99/  
+
+安装 python-ldap  
+pip install python-ldap==3.2.0 报错如下： 
 
     LDAPObject.c
     c:\users\sz_jst122\appdata\local\temp\pip-install-nk3xgzal\python-ldap\modules\constants.h(7): fatal error C1083: Cannot open include file: 'lber.h': No such file or directory
@@ -35,5 +47,8 @@ pip install python-ldap==3.2.0 报错如下：
 !(https://www.jianshu.com/p/532dbf349b3e)
 
 ```
+百度云archery依赖包  
+链接：https://pan.baidu.com/s/19CSyRbZlqOrrP_RYDVqDWg 
+提取码：t14q 
 
 
