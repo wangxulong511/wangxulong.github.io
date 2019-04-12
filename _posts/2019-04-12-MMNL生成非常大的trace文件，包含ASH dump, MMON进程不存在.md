@@ -1,6 +1,20 @@
+---
+layout:     post
+title:      MMNL生成非常大的trace文件，包含ASH dump, MMON进程不存在
+subtitle:   Oracle trace mmon
+date:       2019-04-12
+author:     静观知心
+header-img: img/post-bg-universe.jpg
+catalog: true
+tags:
+    - oracle
+    - mmon
+    - trace
+---
+
 # MMNL生成非常大的trace文件，包含ASH dump, MMON进程不存在
 
-http://ju.outofmemory.cn/entry/367557
+> http://ju.outofmemory.cn/entry/367557
 
 Oracle 11.2.4 RAC trace 日志暴增
 
