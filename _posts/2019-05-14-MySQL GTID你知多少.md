@@ -8,7 +8,7 @@ Retrieved_Gtid_Set：从库已经接收到主库的事务编号
 Executed_Gtid_Set：已经执行的事务编号  
 
 以下的gitd 是因为级联复制后从库执行的GTID值  
-Retrieved_Gtid_Set: 8448095b-2779-11e8-9eee-801844f2eb44:24782795-43457076
+Retrieved_Gtid_Set: 8448095b-2779-11e8-9eee-801844f2eb44:24782795-43457076  
 Executed_Gtid_Set: 8448095b-2779-11e8-9eee-801844f2eb44:1-43457076,
 b29adcee-d60a-11e6-8697-0050568c3815:1-151573105,
 ec3d8ee4-da32-11e6-a1b2-0050568c769d:1-6,
