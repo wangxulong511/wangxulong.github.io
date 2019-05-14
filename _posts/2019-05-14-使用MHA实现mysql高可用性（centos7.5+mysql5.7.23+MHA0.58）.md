@@ -1,6 +1,11 @@
 使用MHA实现mysql高可用性（centos7.5+mysql5.7.23+MHA0.58）
 
-> https://blog.csdn.net/dayi_123/article/details/83690608
+> https://blog.csdn.net/dayi_123/article/details/83690608  
+
+
+# mysql数据库高可用架构-MHA-0.56/0.57详解
+> https://blog.51cto.com/arthur376/1812640  
+
 一、MHA概述
 1、MHA
 
@@ -56,3 +61,19 @@
 10.192.130.68 130-test-redis68
 ```
 
+3、安装MHA
+
+（1）在各节点上安装mha4mysql-node
+
+         在四台机器上上分别安装mha4mysql-node。
+
+         mha4mysql-node下载地址：https://github.com/yoshinorim/mha4mysql-node/releases/tag/v0.58
+
+         mha4mysql-manager下载地址：https://github.com/yoshinorim/mha4mysql-manager/releases/tag/v0.58
+
+（3）在管理节点上安装manage节点
+
+# 在管理节点安装依赖软件
+]# yum install -y perl-Config-Tiny perl-Log-Dispatch  perl-Parallel-ForkManager  perl-Time-HiRes
+# 在管理节点安装mha4mysql-manager
+]# rpm -ivh mha4mysql-manager-0.58-0.el7.centos.noarch.rpm
