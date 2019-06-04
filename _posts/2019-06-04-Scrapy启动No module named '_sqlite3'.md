@@ -48,3 +48,7 @@ $ LD_RUN_PATH=/usr/local/sqlite3/lib sudo make install
 > https://www.jianshu.com/p/3ca63eb17553
 # Python3.6安装sqlite3的终极解决办法
 > https://blog.csdn.net/sparkexpert/article/details/79118448
+
+# ModuleNotFoundError: No module named '_sqlite3'
+> https://blog.csdn.net/weixin_43229107/article/details/83689294
+
