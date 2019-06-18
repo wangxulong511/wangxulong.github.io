@@ -1,14 +1,15 @@
 # MySQL + keepalive高可用搭建
 
-系统环境：centos6.8
+系统环境：centos6.8  
+
 Ip：
-10.101.130.111 主库
-10.101.130.112 从库
+10.101.130.111 主库  
+10.101.130.112 从库  
 
-VIP(虚拟ip/浮动ip)10.101.130.110
+VIP(虚拟ip/浮动ip)10.101.130.110  
 
-软件版本：mysql 5.7.22
-Keepalived 1.2.13
+软件版本：mysql 5.7.22  
+Keepalived 1.2.13   
 ## 安装MySQL 主从
 
 ## 安装keepalived
