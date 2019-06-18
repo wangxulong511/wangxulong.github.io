@@ -76,12 +76,12 @@ virtual_server 10.101.130.110 3306 {
 保存退出
 
 ```
-# vim /etc/keepalived/keepalived.conf
 
 10.101.130.112 从库
 修改keepalived的配置文件
 
 ```
+# vim /etc/keepalived/keepalived.conf
 ! Configuration File for keepalived
 
 global_defs {
