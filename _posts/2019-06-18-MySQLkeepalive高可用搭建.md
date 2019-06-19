@@ -125,7 +125,7 @@ virtual_server 10.101.130.110 3306 {
     
     real_server 10.101.130.112 3306 { 
         weight 98 
-        notify_down /data/sh/mysql.sh 
+        notify_down /data/sh/check_mysql.sh 
         TCP_CHECK { 
             connect_timeout 10 
 	    nb_get_retry 3 
@@ -141,16 +141,55 @@ virtual_server 10.101.130.110 3306 {
 保存退出
 
 上面的配置简单说明：
-state BACKUP  表示为备模式，nopreempt 为不抢占，双方都配为备模式，并且不抢占，可以避免“脑裂”问题，priority 100 为权重，数字越高，权重越高，当双方都配为BACKUP模式，并且配置nopreempt时，keepalived靠这个数字来判断谁是主，谁是备
-主从都要创建/data/sh/mysql.sh脚本
-mkdir /data/sh
-vim /data/sh/mysql.sh 加入以下内容：
+state BACKUP  表示为备模式，nopreempt 为不抢占，双方都配为备模式，并且不抢占，可以避免“脑裂”问题，priority 100 为权重，数字越高，权重越高，当双方都配为BACKUP模式，并且配置nopreempt时，keepalived靠这个数字来判断谁是主，谁是备  
+主从都要创建/data/sh/mysql.sh脚本  
+mkdir /data/sh  
+vim /data/sh/check_mysql.sh 加入以下内容：  
+```
 #！/bin/bash
-/etc/init.d/keepalived  stop
+/etc/init.d/keepalived  stop  
+```
+
+或者 
+
+```
+#!/bin/bash  
+MYSQL=/usr/local/mysql/bin/mysql  
+MYSQL_HOST=localhost 
+MYSQL_USER=root 
+MYSQL_PASSWORD=root
+CHECK_TIME=3  
+#mysql  is working MYSQL_OK is 1 , mysql down MYSQL_OK is 0  
+MYSQL_OK=1 
+function check_mysql_health (){  
+$MYSQL -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e "show status;" >/dev/null 2>&1  
+if [ $? = 0 ] ;then  
+     MYSQL_OK=1 
+else  
+     MYSQL_OK=0 
+fi  
+     return $MYSQL_OK  
+}  
+while [ $CHECK_TIME -ne 0 ]  
+do  
+     let "CHECK_TIME-=1" 
+     check_mysql_health  
+     if [ $MYSQL_OK = 1 ] ; then  
+          CHECK_TIME=0 
+          exit 0  
+     fi  
  
-chmod  755  /data/sh/mysql.sh
-modprobe  ip_vs  #加载ip_vs模块 虚拟IP要用
-lsmod |  grep  ip_vs  查看ip_vs模块有没有加载，如果看到下面的内容，就表示加载成功：
+     if [ $MYSQL_OK -eq 0 ] &&  [ $CHECK_TIME -eq 0 ]  
+     then  
+          /etc/init.d/keepalived stop  
+     exit 1   
+     fi  
+     sleep 1  
+done 
+```
+chmod  755  /data/sh/mysql.sh  
+modprobe  ip_vs  #加载ip_vs模块 虚拟IP要用  
+lsmod |  grep  ip_vs  查看ip_vs模块有没有加载，如果看到下面的内容，就表示加载成功：  
 
 
 /etc/init.d/mysqld  start  #启动mysql
