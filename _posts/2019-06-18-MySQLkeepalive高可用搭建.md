@@ -187,7 +187,7 @@ do
      sleep 1  
 done 
 ```
-chmod  755  /data/sh/mysql.sh  
+chmod  755  /data/sh/check_mysql.sh  
 modprobe  ip_vs  #加载ip_vs模块 虚拟IP要用  
 lsmod |  grep  ip_vs  查看ip_vs模块有没有加载，如果看到下面的内容，就表示加载成功：  
 
