@@ -1,4 +1,16 @@
- read_buffer&read_rnd_buffer
+ SHOW VARIABLES
+WHERE
+ variable_name IN (
+  'read_buffer_size',
+  'read_rnd_buffer_size',
+  'sort_buffer_size',
+  'join_buffer_size',
+  'binlog_cache_size',
+  'tmp_table_size'
+ );
+ 
+ 
+ read_buffer&read_rnd_buffer
 分别存放了对顺序和随机扫描（例如按照排序的顺序访问）的缓存。当thread进行顺序或随机扫描数据时会首先扫描该buffer空间以避免更多的物理读。每个sessionRDS给予256K的大小。
  sort_buffer
 需要执行order by和group by的sql都会分配sort_buffer用来存储排序的中间结果，当排序的过程中如果存储带下大于sort_buffer_size的话会在磁盘生成临时表以完成操作。根据MySQL的文档可知在linux系统中，当分配空间大于2M时会使用mmap() 而不是 malloc() 来进行内存分配，导致效率降低。在RDS上给予256K。
