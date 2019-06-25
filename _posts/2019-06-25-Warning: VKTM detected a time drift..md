@@ -1,5 +1,27 @@
 # Warning: VKTM detected a time drift.
 
+原因：今天巡检数据库时发现asm alert日志
+
+ ```
+     Sat Jun 22 23:00:26 2019
+Warning: VKTM detected a time drift.
+Time drifts can result in an unexpected behavior such as time-outs. Please check trace file for more details.
+Sun Jun 23 23:00:29 2019
+Warning: VKTM detected a time drift.
+Time drifts can result in an unexpected behavior such as time-outs. Please check trace file for more details.
+Mon Jun 24 23:00:32 2019
+Warning: VKTM detected a time drift.
+Time drifts can result in an unexpected behavior such as time-outs. Please check trace file for more details.
+Tue Jun 25 09:24:33 2019
+Warning: VKTM detected a time drift.
+Time drifts can result in an unexpected behavior such as time-outs. Please check trace file for more details.
+ 
+ ```
+查看crontab
+00 23 * * * /usr/sbin/ntpdate ntpdate time.ntp.org
+
+服务器在23点有时间同步，导致数据库VKTM时间飘移
+
 ```
 集群版本：11.2.0.4  数据库版本：11.2.0.4 
 
