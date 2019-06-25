@@ -22,6 +22,8 @@ Time drifts can result in an unexpected behavior such as time-outs. Please check
 
 服务器在23点有时间同步，导致数据库VKTM时间飘移
 
+网上资料如下：  
+
 ```
 集群版本：11.2.0.4  数据库版本：11.2.0.4 
 
