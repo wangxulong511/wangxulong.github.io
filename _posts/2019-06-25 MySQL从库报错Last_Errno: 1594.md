@@ -2,21 +2,21 @@
 
 服务器磁盘不足导致从库复制中断
 
-
+```
 [test@centos3 ~]$ df -lh
 Filesystem                      Size  Used Avail Use% Mounted on
 /dev/mapper/vg_centos-LogVol01  592G  562G   13M 100% /
 tmpfs                           3.9G     0  3.9G   0% /dev/shm
 /dev/sda1                       485M   39M  421M   9% /boot
-
+```
 
 ## 1、版本  
-###1）服务器版本  
+### 1）服务器版本  
 CentOS release 6.5 (Final)
 
 [test@centos3 ~]$ uname -a  
 Linux jst-101-centos3 2.6.32-431.el6.x86_64 #1 SMP Fri Nov 22 03:15:09 UTC 2013 x86_64 x86_64 x86_64 GNU/Linux
-###2）数据库版本
+### 2）数据库版本
 ```
 mysql> status
 --------------
