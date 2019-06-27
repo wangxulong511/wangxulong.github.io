@@ -1,4 +1,6 @@
 # Clickhouse安装及使用
+
+```
 一、简介
 Yandex在2016年6月15日开源了一个数据分析的数据库，名字叫做ClickHouse，这对保守俄罗斯人来说是个特大事。更让人惊讶的是，这个列式存储数据库的跑分要超过很多流行的商业MPP数据库软件，例如Vertica。如果你没有听过Vertica，那你一定听过 Michael Stonebraker，2014年图灵奖的获得者，PostgreSQL和Ingres发明者（Sybase和SQL Server都是继承Ingres而来的）, Paradigm4和SciDB的创办者。Michael Stonebraker于2005年创办Vertica公司，后来该公司被HP收购，HP Vertica成为MPP列式存储商业数据库的高性能代表，Facebook就购买了Vertica数据用于用户行为分析。简单的说，ClickHouse作为分析型数据库，有三大特点：一是跑分快，二是功能多，三是文艺范 
 官网地址：https://clickhouse.yandex/ 
@@ -351,7 +353,11 @@ clickhouse-client –query “INSERT INTO default.test3 FORMAT CSV” < test3.cs
 ┌─id1─┬─────id2─┬─name1──┬─name2───────┬──────date1─┬───────────────date2─┐
 │   1 │ 123.456 │ abc123 │ abc"\'\n123 │ 2017-05-06 │ 2017-05-06 07:08:09 │
 └─────┴─────────┴────────┴─────────────┴────────────┴─────────────────────┘
-
+```
 
 来源：CSDN 
-原文：https://blog.csdn.net/m0_37739193/article/details/79611560 
+> 原文：https://blog.csdn.net/m0_37739193/article/details/79611560 
+
+
+使用ClickHouse一键接管MySQL数据分析
+> 原文：https://www.jianshu.com/p/5bfb043a075d
