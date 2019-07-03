@@ -13,6 +13,10 @@
 >　https://www.jianshu.com/p/20639fdfdc99
 
 
+## ClickHouse高性能分布式分析数据库
+> https://www.slidestalk.com/s/clickhouse_pinyou
+
+
 ## 开源OLAP引擎测评报告(SparkSql、Presto、Impala、HAWQ、ClickHouse、GreenPlum)
 > http://www.clickhouse.com.cn/topic/5c453371389ad55f127768ea  
 > https://github.com/analysys/public-docs/
