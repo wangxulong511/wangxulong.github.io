@@ -1,3 +1,13 @@
+---
+author: "wangxulong511"
+description: "Oracle 11gR2 DG部署（RMAN方式）"
+date: "2019-07-12"
+categories: ["DataBase", "DB"]
+tags: ["oracle DG"]
+type: "post"
+---  
+
+
 # Oracle 11gR2 DG部署（RMAN方式）
 
 ### Oracle 11gR2 DG部署（RMAN方式）
