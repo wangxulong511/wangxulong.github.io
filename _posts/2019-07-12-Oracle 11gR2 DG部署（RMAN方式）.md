@@ -1,6 +1,8 @@
 # Oracle 11gR2 DG部署（RMAN方式）
+
 ### Oracle 11gR2 DG部署（RMAN方式）
-> https://blog.csdn.net/onlyshenmin/article/details/81069263#51DG_switchover__317  
+> https://blog.csdn.net/onlyshenmin/article/details/81069263#51DG_switchover__317    
+
 ###　Oracle 11G DG之Duplicate方式搭建
 > http://blog.itpub.net/28569596/viewspace-2150303/
 
@@ -18,11 +20,13 @@ alter system set fal_client='testdb' scope=spfile;
 alter system set db_file_name_convert ='/data/testdb','/data/testdb' scope=spfile;
 alter system set log_file_name_convert='/data/testdb','/data/testdb' scope=spfile;
 alter system set standby_file_management='AUTO' scope=spfile;
+
 ```
-通过spfile 创建pfile
+通过spfile 创建pfile 
 > create pfile='/home/oracle/pfile.ora' from spfile;
 
 修改pfile并发送到备库,修改后的备库pfile文件
+
 ```
 testdb.__db_cache_size=1476395008
 testdb.__java_pool_size=16777216
@@ -72,16 +76,19 @@ testdb.__streams_pool_size=0
 ```
 
 启动备库 startup nomonut
+
 >SQL> startup nomoun
 
 rman DUPLICATE 
->rman target sys/SIGasmlib@HSIDBPR auxiliary sys/SIGasmlib@HSIDBSD 
->RMAN>duplicate target database for standby from active database nofilenamecheck dorecover;
-备库启动到open状态.
-```
 
-SQL> alter database recover managed standby database using current logfile disconnect from session
-  2  ;
+```
+rman target sys/SIGasmlib@HSIDBPR auxiliary sys/SIGasmlib@HSIDBSD 
+RMAN>duplicate target database for standby from active database nofilenamecheck dorecover;
+备库启动到open状态.
+
+
+SQL> alter database recover managed standby database using current logfile disconnect from session;
+ 
 
 Database altered.
 
