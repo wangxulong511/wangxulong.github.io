@@ -13,7 +13,7 @@ type: "post"
 ### Oracle 11gR2 DG部署（RMAN方式）
 > https://blog.csdn.net/onlyshenmin/article/details/81069263#51DG_switchover__317    
 
-###　Oracle 11G DG之Duplicate方式搭建
+### Oracle 11G DG之Duplicate方式搭建
 > http://blog.itpub.net/28569596/viewspace-2150303/
 
 ## 搭建DG主库执行的脚本
