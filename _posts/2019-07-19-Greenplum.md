@@ -8,7 +8,20 @@
 ## centos6.9 greenplum5.3离线部署文档
 > https://www.cnblogs.com/chenminklutz/p/9019831.html
 
+## greenplum 常用客户端工具
+> https://blog.csdn.net/xfg0218/article/details/90412285
 
+## greenplum用户权限管理
+> https://blog.csdn.net/weixin_42658788/article/details/88040209
+
+## 客户端如何访问greenplum
+> https://blog.csdn.net/kwame211/article/details/76229416
+
+## python连接Greenplum数据库
+> https://www.cnblogs.com/xiao-apple36/p/10362367.html
+
+> greenplum 
+https://www.cnblogs.com/ctypyb2002/category/1319670.html
 ## 异常处理 
 ##　Greenplum初始化数据库时出现gpadmin-[ERROR]:-gpstart error: Do not have enough valid segments to start the arr
 > https://blog.csdn.net/double_happiness/article/details/83142299
