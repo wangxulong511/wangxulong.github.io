@@ -39,8 +39,8 @@ alter database datafile 4 resize 2000M;
 
 
 --07.回收表空间碎片
-ANALYZE TABLESPACE TB_TEST COALESCE;
 analyze table test compute statistics;
+
 ```
 
 ## oracle管理笔记
