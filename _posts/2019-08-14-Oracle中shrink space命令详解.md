@@ -42,6 +42,8 @@ alter database datafile 4 resize 2000M;
 analyze table test compute statistics;
 
 ```
+## ORACLE表空间和表碎片分析及整理方法
+> https://blog.csdn.net/x6_9x/article/details/50596589
 
 ## oracle管理笔记
 > http://blog.itpub.net/14578680/viewspace-608318/
