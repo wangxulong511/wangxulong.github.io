@@ -1,4 +1,7 @@
 # Oracle 查看表空间的大小及使用情况sql语句
+
+## oracle 回收表空间的数据文件大小
+> https://www.cnblogs.com/vipsoft/p/9516945.html
 ```
 最近维护的项目遇到了oracle的性能的问题，需要查询一下oracle数据库表空间的大小以及每个表所占空间的大小，在网上搜索了一些查询语句，在此记录一下：
 
@@ -26,9 +29,16 @@ select a.tablespace_name, total, free, total-free as used, substr(free/total * 1
 where a.tablespace_name = b.tablespace_name
 order by a.tablespace_name;
 
+4、resize回收表空间
+
+select   'alter database datafile '''||a.file_name||''' resize '    ||round(a.filesize - (a.filesize - c.hwmsize-100) *0.8)||'M;',  
+a.filesize,c.hwmsize 
+from  ( select file_id,file_name,round(bytes/1024/1024) filesize from dba_data_files ) a,
+( select file_id,round(max(block_id)*8/1024) HWMsize from dba_extents group by file_id) c 
+where a.file_id = c.file_id   and a.filesize - c.hwmsize > 100
 
 
-4、查询某个具体的表所占空间的大小，把“TABLE_NAME”换成具体要查询的表的名称就可以了：
+5、查询某个具体的表所占空间的大小，把“TABLE_NAME”换成具体要查询的表的名称就可以了：
 
 select t.segment_name, t.segment_type, sum(t.bytes / 1024 / 1024) "占用空间(M)"
 from dba_segments t
