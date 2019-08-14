@@ -43,5 +43,5 @@ ANALYZE TABLESPACE TB_TEST COALESCE;
 analyze table test compute statistics;
 ```
 
-## oracle原理笔记
+## oracle管理笔记
 > http://blog.itpub.net/14578680/viewspace-608318/
