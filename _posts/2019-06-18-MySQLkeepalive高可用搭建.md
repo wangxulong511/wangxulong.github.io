@@ -3,10 +3,10 @@
 系统环境：centos6.8  
 
 Ip：
-10.101.130.111 主库  
-10.101.130.112 从库  
+10.10.130.111 主库  
+10.10.130.112 从库  
 
-VIP(虚拟ip/浮动ip)10.101.130.110  
+VIP(虚拟ip/浮动ip)10.10.130.110  
 
 软件版本：mysql 5.7.22  
 Keepalived 1.2.13   
@@ -17,7 +17,7 @@ yum install keepalived
 
 ## 配置keeplived
 
-10.101.130.111 主库
+10.10.130.111 主库
 修改keepalived的配置文件
 ```
 # vim /etc/keepalived/keepalived.conf
@@ -50,18 +50,18 @@ vrrp_instance VI_1 {
         #192.168.200.16
         #192.168.200.17
         #192.168.200.18
-        10.101.130.110
+        10.10.130.110
     }
 }
 
-virtual_server 10.101.130.110 3306 {
+virtual_server 10.10.130.110 3306 {
     delay_loop 6 
     lb_algo wrr 
     lb_kind DR 
     persistence_timeout 60 
     protocol TCP 
     
-    real_server 10.101.130.111 3306 { 
+    real_server 10.10.130.111 3306 { 
         weight 98 
         notify_down /data/sh/mysql.sh 
         TCP_CHECK { 
@@ -78,7 +78,7 @@ virtual_server 10.101.130.110 3306 {
 
 ```
 
-10.101.130.112 从库
+10.10.130.112 从库
 修改keepalived的配置文件
 
 ```
@@ -112,18 +112,18 @@ vrrp_instance VI_1 {
         #192.168.200.16
         #192.168.200.17
         #192.168.200.18
-        10.101.130.110
+        10.10.130.110
     }
 }
 
-virtual_server 10.101.130.110 3306 {
+virtual_server 10.10.130.110 3306 {
     delay_loop 6 
     lb_algo wrr 
     lb_kind DR 
     persistence_timeout 60 
     protocol TCP 
     
-    real_server 10.101.130.112 3306 { 
+    real_server 10.10.130.112 3306 { 
         weight 98 
         notify_down /data/sh/check_mysql.sh 
         TCP_CHECK { 
@@ -196,7 +196,7 @@ lsmod |  grep  ip_vs  查看ip_vs模块有没有加载，如果看到下面的�
 /etc/init.d/keepalive  start   #启动keepalived
 在36上的操作和38上一样，只是keepalived.conf配置文件里priority 100 改为 priority 98
  
-real_server 10.101.130.111 改为 10.101.130.112其他不变。
+real_server 10.10.130.111 改为 10.10.130.112其他不变。
  
 查看VIP情况命令: ip a
 
