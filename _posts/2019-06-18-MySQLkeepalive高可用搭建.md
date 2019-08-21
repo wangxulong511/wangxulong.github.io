@@ -1,3 +1,15 @@
+---
+layout:     post
+title:      MySQL + keepalive高可用搭建
+subtitle:   MySQL + keepalive高可用搭建(如果不踩坑的话🙈🙊🙉)
+date:       2017-02-06
+author:     BY
+header-img: img/post-bg-re-vs-ng2.jpg
+catalog: true
+tags:
+    - MySQL+keepalive
+---
+
 # MySQL + keepalive高可用搭建
 
 系统环境：centos6.8  
@@ -202,3 +214,66 @@ real_server 10.10.130.111 改为 10.10.130.112其他不变。
 
  
 至此mysql的主从高可用就做好了，可以在111上测试挺掉mysql服务，看看vip会不会漂移到112上，一般来说都是没问题的，如果有问题，请检查你的配置，步骤是不是有错误，还有selinux，防火墙是否关闭等
+
+
+
+2019-8-21 
+听群里的大佬说只做VIP飘移不需要配置 virtual_server，LVS 做负载时使用，大佬原话(vip只做主备切换不配合lvs的话，我都是这样配置的，不用写virtual server)
+
+ 
+```
+# vim /etc/keepalived/keepalived.conf
+! Configuration File for keepalived
+global_defs {
+
+    router_id MySQL_HA
+	vrrp_skip_check_adv_addr
+	#vrrp_strict
+	#vrrp_garp_interval  0
+	#vrrp_gna_interval  0
+
+}
+
+varrp_script check_script  {
+    script "/data/sh/mysql.sh"
+    #script "/etc/keepalived/scripts/check_mysql.sh"
+    interval 3   
+}
+
+vrrp_instance VI_1 {
+
+   state BACKUP    
+
+   interface eth0
+
+   virtual_router_id 245
+
+   priority  100
+
+   advert_int 2
+   
+   nopreempt
+   
+   track_script {
+   
+   check_script
+   
+   }
+   
+   authentication {
+
+        auth_type PASS
+
+        auth_pass 1111   
+
+   }
+
+   virtual_ipaddress {
+
+        10.10.130.110/24 dev eth0 scope global label eth0:1
+
+        }
+
+   }
+```
+
