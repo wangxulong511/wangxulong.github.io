@@ -69,7 +69,7 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 ## mysql 5.7 group replication 之三 ERROR 3092 (HY000): The server is not configured properly to be an ac
 > https://blog.csdn.net/ctypyb2002/article/details/88062847
 
-关闭MySQL数据库后重启mgr发现启动不了 ,从节点执行后可以启动
+关闭MySQL数据库后重启mgr发现启动不了 ,从节点执行后可以启动  
 set global group_replication_allow_local_disjoint_gtids_join=ON; 
 ```
 [root@mysql.sock][(none)]> START GROUP_REPLICATION;
