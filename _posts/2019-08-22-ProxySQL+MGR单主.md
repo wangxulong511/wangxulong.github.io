@@ -11,6 +11,8 @@
 ## Mysql MGR监控及优化点
 > http://blog.itpub.net/9522838/viewspace-2285017/
 
+## MySQL用中间件ProxySQL实现读写分离和主节点故障应用无感应
+> https://blog.csdn.net/jolly10/article/details/80415685
 
 
 ProxySQL  管理端口默认（6032）
