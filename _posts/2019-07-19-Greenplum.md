@@ -1,3 +1,5 @@
+# Greenplum数据平台资料下载
+> https://greenplum.cn/2019/06/17/greenplumdownload/
 
 # Greenplum 5.16.0初探
 > https://blog.51cto.com/lee90/2371858?source=drt
