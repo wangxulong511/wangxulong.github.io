@@ -12,6 +12,8 @@ tags:
 
 # MySQL + keepalive高可用搭建
 
+> https://www.cnblogs.com/ywrj/p/9483427.html
+
 系统环境：centos6.8  
 
 Ip：
