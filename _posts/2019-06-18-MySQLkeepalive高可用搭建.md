@@ -13,6 +13,8 @@ tags:
 # MySQL + keepalive高可用搭建
 
 > https://www.cnblogs.com/ywrj/p/9483427.html
+## Keepalived+MySQL实现高可用
+> https://www.cnblogs.com/gomysql/p/3856484.html
 
 系统环境：centos6.8  
 
