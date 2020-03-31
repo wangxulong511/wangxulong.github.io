@@ -1,6 +1,8 @@
 # mysql 用 group by 查询时，会自动保留   对应组 ‘最先搜索出来的数据’，但这时数据可能不是最新的
 > http://www.iamlintao.com/6955.html
 
+升级MySQL5.7，开发不得不注意的坑
+> https://www.cnblogs.com/ivictor/p/9281488.html
 如何才能获取‘最新数据’ 呢，这需要根据mysql的版本来“区别对待”
 
 原因：在mysql5.7中，如果不加limit，系统会把order by优化掉。
