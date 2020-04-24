@@ -1,0 +1,854 @@
+# MySQL MHA 重要配置
+>  https://blog.csdn.net/bvdzg44446/article/details/100955335
+```
+1、集群信息
+
+[root@es3 local]# cat /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+192.168.56.14 es1
+192.168.56.15 es2
+192.168.56.16 es3
+2、MySQL配置：
+
+[root@es3 local]# grep -v ^# /etc/my.cnf
+
+[mysqld]
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+
+symbolic-links=0
+
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+server_id = 3
+log-bin=mysqlbin
+binlog_format = row
+log_slave_updates = 1
+
+enforce_gtid_consistency = ON
+gtid_mode = ON
+
+slave-parallel-type=LOGICAL_CLOCK
+slave-parallel-workers=16
+master_info_repository=TABLE
+relay_log_info_repository=TABLE
+relay_log_recovery=ON
+
+rpl_semi_sync_master_enabled = 1
+rpl_semi_sync_master_timeout = 1000
+rpl_semi_sync_slave_enabled = 1
+[root@es3 local]#
+3、app1.cnf信息
+
+[root@es3 ~]# cat app1.cnf 
+
+[server default] 
+master_ip_failover_script=/usr/local/bin/master_ip_failover
+
+master_ip_online_change_script= /usr/local/bin/master_ip_online_change
+
+report_script=/usr/local/bin/send_report
+
+shutdown_script=/usr/local/bin/power_manager
+user=repl 
+password=123456
+ssh_user=root 
+manager_workdir=/data/manager
+remote_workdir=/tmp
+repl_user=repl 
+repl_password=123456 
+secondary_check_script=masterha_secondary_check -s 192.168.56.16 -s 192.168.56.15
+[server1] 
+hostname=es1
+port=3306 
+ 
+[server2] 
+hostname=es2
+port=3306 
+[server3] 
+hostname=es3
+port=3306 
+[root@es3 ~]#
+4、master_ip_failover脚本
+
+#!/usr/bin/env perl
+use strict;
+use warnings FATAL => 'all';
+ 
+use Getopt::Long;
+ 
+my (
+    $command,          $ssh_user,        $orig_master_host, $orig_master_ip,
+    $orig_master_port, $new_master_host, $new_master_ip,    $new_master_port
+);
+ 
+my $vip = '192.168.56.191/24';  # Virtual IP
+my $key = "1";
+my $ssh_start_vip = "/sbin/ifconfig enp0s8:$key $vip";
+my $ssh_stop_vip = "/sbin/ifconfig enp0s8:$key down";
+#my $ssh_Bcast_arp = "arping -c 3 -A 192.168.56.191";   #ARP回复模式，更新邻居。要是不加则服务器会自动等到vip缓存失效，期间VIP会有一定时间的不可用。
+my $ssh_Bcast_arp = "arping -c 3 -A 192.168.56.191 -I enp0s8";   #ARP回复模式，更新邻居。要是不加则服务器会自动等到vip缓存失效，期间VIP会有一定时间的不可用
+$ssh_user = "root";
+ 
+GetOptions(
+    'command=s'          => \$command,
+    'ssh_user=s'         => \$ssh_user,
+    'orig_master_host=s' => \$orig_master_host,
+    'orig_master_ip=s'   => \$orig_master_ip,
+    'orig_master_port=i' => \$orig_master_port,
+    'new_master_host=s'  => \$new_master_host,
+    'new_master_ip=s'    => \$new_master_ip,
+    'new_master_port=i'  => \$new_master_port,
+);
+ 
+exit &main();
+ 
+sub main {
+ 
+    print "\n\nIN SCRIPT TEST====$ssh_stop_vip==$ssh_start_vip===\n\n";
+ 
+    if ( $command eq "stop" || $command eq "stopssh" ) {
+ 
+        my $exit_code = 1;
+        eval {
+            print "Disabling the VIP on old master: $orig_master_host \n";
+            &stop_vip();
+            $exit_code = 0;
+        };
+        if ($@) {
+            warn "Got Error: $@\n";
+            exit $exit_code;
+        }
+        exit $exit_code;
+    }
+    elsif ( $command eq "start" ) {
+ 
+        my $exit_code = 10;
+        eval {
+            print "Enabling the VIP - $vip on the new master - $new_master_host \n";
+            &start_vip();
+            &start_arp();
+            $exit_code = 0;
+        };
+        if ($@) {
+            warn $@;
+            exit $exit_code;
+        }
+        exit $exit_code;
+    }
+    elsif ( $command eq "status" ) {
+        print "Checking the Status of the script.. OK \n";
+        exit 0;
+    }
+    else {
+        &usage();
+        exit 1;
+    }
+}
+ 
+sub start_vip() {
+    `ssh $ssh_user\@$new_master_host \" $ssh_start_vip \"`;
+}
+
+sub start_arp() {
+    `ssh $ssh_user\@$new_master_host \" $ssh_Bcast_arp \"`;
+}
+
+sub stop_vip() {
+     return 0  unless  ($ssh_user);
+    `ssh $ssh_user\@$orig_master_host \" $ssh_stop_vip \"`;
+}
+ 
+sub usage {
+    print
+    "Usage: master_ip_failover --command=start|stop|stopssh|status --orig_master_host=host --orig_master_ip=ip --orig_master_port=port --new_master_host=host --new_master_ip=ip --new_master_port=port\n";
+}
+5、master_ip_online_change脚本
+
+#!/usr/bin/env perl
+use strict;  
+use warnings FATAL =>'all';  
+  
+use Getopt::Long;  
+  
+my $vip = '192.168.56.191/24';  # Virtual IP  
+my $key = "1";  
+my $ssh_start_vip = "/sbin/ifconfig enp0s8:$key $vip";  
+my $ssh_stop_vip = "/sbin/ifconfig enp0s8:$key down";  
+my $exit_code = 0;  
+my $ssh_Bcast_arp = "arping -c 3 -A 192.168.56.191 -I enp0s8";   #ARP回复模式，更新邻居。要是不加则服务器会自动等到vip缓存失效，期间VIP会有一定时间的不可用。
+  
+my (  
+  $command,              $orig_master_is_new_slave, $orig_master_host,  
+  $orig_master_ip,       $orig_master_port,         $orig_master_user,  
+  $orig_master_password, $orig_master_ssh_user,     $new_master_host,  
+  $new_master_ip,        $new_master_port,          $new_master_user,  
+  $new_master_password,  $new_master_ssh_user,  
+);  
+GetOptions(  
+  'command=s'                => \$command,  
+  'orig_master_is_new_slave' => \$orig_master_is_new_slave,  
+  'orig_master_host=s'       => \$orig_master_host,  
+  'orig_master_ip=s'         => \$orig_master_ip,  
+  'orig_master_port=i'       => \$orig_master_port,  
+  'orig_master_user=s'       => \$orig_master_user,  
+  'orig_master_password=s'   => \$orig_master_password,  
+  'orig_master_ssh_user=s'   => \$orig_master_ssh_user,  
+  'new_master_host=s'        => \$new_master_host,  
+  'new_master_ip=s'          => \$new_master_ip,  
+  'new_master_port=i'        => \$new_master_port,  
+  'new_master_user=s'        => \$new_master_user,  
+  'new_master_password=s'    => \$new_master_password,  
+  'new_master_ssh_user=s'    => \$new_master_ssh_user,  
+);  
+  
+#my $ssh_Bcast_arp = "arping -c 3 -A 192.168.56.191";   #ARP回复模式，更新邻居。要是不加则服务器会自动等到vip缓存失效，期间VIP会有一定时间的不可用。
+  
+exit &main();  
+  
+sub main {  
+  
+#print "\n\nIN SCRIPT TEST====$ssh_stop_vip==$ssh_start_vip===\n\n";  
+  
+if ( $command eq "stop" || $command eq "stopssh" ) {  
+  
+        # $orig_master_host, $orig_master_ip, $orig_master_port are passed.  
+        # If you manage master ip address at global catalog database,  
+        # invalidate orig_master_ip here.  
+        my $exit_code = 1;  
+        eval {  
+            print "\n\n\n***************************************************************\n";  
+            print "Disabling the VIP - $vip on old master: $orig_master_host\n";  
+            print "***************************************************************\n\n\n\n";  
+&stop_vip();  
+            $exit_code = 0;  
+        };  
+        if ($@) {  
+            warn "Got Error: $@\n";  
+            exit $exit_code;  
+        }  
+        exit $exit_code;  
+}  
+elsif ( $command eq "start" ) {  
+  
+        # all arguments are passed.  
+        # If you manage master ip address at global catalog database,  
+        # activate new_master_ip here.  
+        # You can also grant write access (create user, set read_only=0, etc) here.  
+my $exit_code = 10;  
+        eval {  
+            print "\n\n\n***************************************************************\n";  
+            print "Enabling the VIP - $vip on new master: $new_master_host \n";  
+            print "***************************************************************\n\n\n\n";  
+&start_vip();  
+&start_arp();
+            $exit_code = 0;  
+        };  
+        if ($@) {  
+            warn $@;  
+            exit $exit_code;  
+        }  
+        exit $exit_code;  
+}  
+elsif ( $command eq "status" ) {  
+        print "Checking the Status of the script.. OK \n";  
+        `ssh $orig_master_ssh_user\@$orig_master_host \" $ssh_start_vip \"`;  
+        exit 0;  
+}  
+else {  
+&usage();  
+        exit 1;  
+}  
+}  
+  
+# A simple system call that enable the VIP on the new master  
+sub start_vip() {  
+`ssh $new_master_ssh_user\@$new_master_host \" $ssh_start_vip \"`;  
+}  
+
+sub start_arp() {
+    `ssh $new_master_ssh_user\@$new_master_host \" $ssh_Bcast_arp \"`;
+}
+# A simple system call that disable the VIP on the old_master  
+sub stop_vip() {  
+`ssh $orig_master_ssh_user\@$orig_master_host \" $ssh_stop_vip \"`;  
+}  
+  
+sub usage {  
+print  
+"Usage: master_ip_failover --command=start|stop|stopssh|status --orig_master_host=host --orig_master_ip=ip --orig_master_port=port --new_master_host=host --new_master_ip=ip --new_master_port=port\n";  
+}
+6、report_script脚本
+
+#!/bin/bash
+
+echo `hostname`   `hostname -i` >> mail.txt
+
+echo `date` >mail.txt
+
+
+echo "the mha has been switched" >>mail.txt
+
+mail -s "the mha has been switched on `hostname -i` " xxxxxxx@163.com <mail.txt
+7、power_manager 防止脑裂脚本
+
+#!/usr/bin/env perl
+
+#  Copyright (C) 2011 DeNA Co.,Ltd.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#  Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+## Note: This is a sample script and is not complete. Modify the script based on your environment.
+
+use strict;
+use warnings FATAL => 'all';
+
+use Getopt::Long;
+use Pod::Usage;
+use Net::Telnet;
+use MHA::ManagerConst;
+use MHA::ManagerUtil;
+
+my $SSH_STOP_OK           = 10;
+my $COMMAND_NOT_SUPPORTED = 20;
+my $ILO_ADMIN             = 'Administrator';
+my $DRAC_ADMIN            = 'root';
+my $PASSWORD              = 'xxx';
+my $max_retries           = 10;
+
+exit &main();
+
+sub get_power_status_drac_internal {
+  my $telnet = shift;
+  my $prompt = shift;
+  $telnet->print("racadm serveraction powerstatus");
+  ($_) = $telnet->waitfor($prompt);
+  my $power_state = "void";
+  my @cmd_out     = split /\n/;
+
+  # discard command sent to DRAC
+  $_ = shift @cmd_out;
+
+  #strip ansi control chars
+  s/\e\[(([0-9]+;)*[0-9]+)*[ABCDfHJKmsu]//g;
+  s/^.*\x0D//;
+  foreach (@cmd_out) {
+    s/^\s+//g;
+    s/\s+$//g;
+    if (m/^Server power status: (\w+)/) {
+      $power_state = lc($1);
+      last;
+    }
+  }
+  return $power_state;
+}
+
+sub power_off_drac_internal {
+  my $telnet = shift;
+  my $prompt = shift;
+  $telnet->print("racadm serveraction powerdown");
+  $telnet->waitfor($prompt);
+}
+
+sub power_on_drac_internal {
+  my $telnet = shift;
+  my $prompt = shift;
+  $telnet->print("racadm serveraction powerup");
+  $telnet->waitfor($prompt);
+}
+
+sub login_drac_internal {
+  my $drac_addr = shift;
+  my $prompt    = '/admin1|\$/';
+  my $telnet    = new Net::Telnet(
+    Timeout => 10,
+    Prompt  => $prompt,
+  );
+  $telnet->open($drac_addr);
+  $telnet->waitfor('/login/i');
+  $telnet->print($DRAC_ADMIN);
+  $telnet->waitfor('/password/i');
+  $telnet->print($PASSWORD);
+  $telnet->waitfor($prompt);
+
+  return ( $telnet, $prompt );
+}
+
+sub power_off_drac {
+  my $drac_addr    = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    my ( $telnet, $prompt ) = login_drac_internal($drac_addr);
+    power_off_drac_internal( $telnet, $prompt );
+    $power_status = get_power_status_drac_internal( $telnet, $prompt );
+    $telnet->close;
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub power_on_drac {
+  my $drac_addr    = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    my ( $telnet, $prompt ) = login_drac_internal($drac_addr);
+    power_on_drac_internal( $telnet, $prompt );
+    $power_status = get_power_status_drac_internal( $telnet, $prompt );
+    $telnet->close;
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub power_status_drac {
+  my $drac_addr    = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    my ( $telnet, $prompt ) = login_drac_internal($drac_addr);
+    $power_status = get_power_status_drac_internal( $telnet, $prompt );
+    $telnet->close;
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub power_status_ilo {
+  my $ilo_addr     = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    my $ipmi_out =
+`ipmitool -H $ilo_addr -U $ILO_ADMIN -P $PASSWORD -I lanplus  power status`;
+    die
+"Failed to get power status from ipmitool. Maybe you need to upgrade ILO firmware version.\n"
+      if ($?);
+    chomp($ipmi_out);
+    if ( $ipmi_out =~ m/^Chassis Power is (\w+)/ ) {
+      $power_status = lc($1);
+    }
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub power_on_ilo {
+  my $ilo_addr     = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    $power_status = power_status_ilo($ilo_addr);
+    if ( $power_status ne "off" ) {
+      die "Power from ipmitool is already on.\n" if ( $power_status eq "on" );
+      return $power_status;
+    }
+    `ipmitool -H $ilo_addr -U $ILO_ADMIN -P $PASSWORD -I lanplus  power on`;
+    $power_status = power_status_ilo($ilo_addr);
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub power_off_ilo {
+  my $ilo_addr     = shift;
+  my $power_status = "void";
+  local $@;
+  eval {
+    $power_status = power_status_ilo($ilo_addr);
+    if ( $power_status ne "on" ) {
+      die "Power from ipmitool is already off.\n" if ( $power_status eq "off" );
+      return $power_status;
+    }
+    `ipmitool -H $ilo_addr -U $ILO_ADMIN -P $PASSWORD -I lanplus  power off`;
+    $power_status = power_status_ilo($ilo_addr);
+  };
+  if ($@) {
+    warn $@;
+  }
+  return $power_status;
+}
+
+sub get_power_status {
+  my ( $admin_addr, $server_type ) = @_;
+  my $power_status = "void";
+  if ( $server_type eq "ilo" ) {
+    $power_status = power_status_ilo($admin_addr);
+  }
+  elsif ( $server_type eq "drac" ) {
+    $power_status = power_status_drac($admin_addr);
+  }
+  return $power_status;
+}
+
+sub stop {
+  my ( $real_host, $admin_addr, $server_type ) = @_;
+
+  my $power_status = "void";
+  if ( $server_type eq "ilo" ) {
+    $power_status = power_off_ilo($admin_addr);
+  }
+  elsif ( $server_type eq "drac" ) {
+    $power_status = power_off_drac($admin_addr);
+  }
+
+  if ( $power_status eq "off" ) {
+    print "Power of $real_host was successfully turned off.\n";
+    return 0;
+  }
+  elsif ( $power_status ne "on" ) {
+    return $COMMAND_NOT_SUPPORTED;
+  }
+
+  my $retry_count = 0;
+  while ( $retry_count < $max_retries ) {
+    $power_status = get_power_status( $admin_addr, $server_type );
+    last if ( $power_status eq "off" );
+    print
+"Waiting until power status becomes 'off'. Current status is $power_status ...\n";
+    sleep 3;
+    $retry_count++;
+  }
+
+  if ( $power_status eq "off" ) {
+    print "Power of $real_host was successfully turned off.\n";
+    return 0;
+  }
+  else {
+    print
+      "Power of $real_host was not turned off. Check the host for detail.\n";
+    return 1;
+  }
+}
+
+sub stopssh {
+  my ( $ssh_user, $real_host, $real_ip, $pid_file ) = @_;
+  my $ssh_user_host = $ssh_user . '@';
+  if ($real_ip) {
+    $ssh_user_host .= $real_ip;
+  }
+  else {
+    $ssh_user_host .= $real_host;
+  }
+
+  my $command;
+  my ( $high_ret, $low_ret );
+  if ($pid_file) {
+    $command =
+"\"if [ ! -e $pid_file ]; then exit 1; fi; pid=\\\`cat $pid_file\\\`; rm -f $pid_file; kill -9 \\\$pid; a=\\\`ps ax | grep $pid_file | grep -v grep | wc | awk {'print \\\$1'}\\\`; if [ \"a\\\$a\" = \"a0\" ]; then exit 10; fi; sleep 1; a=\\\`ps ax | grep $pid_file | grep -v grep | wc | awk {'print \\\$1'}\\\`; if [ \"a\\\$a\" = \"a0\" ]; then exit 10; else exit 1; fi\"";
+    ( $high_ret, $low_ret ) = MHA::ManagerUtil::exec_system(
+      "ssh $ssh_user_host $MHA::ManagerConst::SSH_OPT_CHECK $command");
+    if ( $high_ret == $SSH_STOP_OK && $low_ret == 0 ) {
+      print "ssh reachable. mysqld stopped. power off not needed.\n";
+      return $high_ret;
+    }
+    print "Killing mysqld instance based on $pid_file failed.\n";
+  }
+
+  print "Killing all mysqld instances on $real_host..\n";
+  $command =
+"\"killall -9 mysqld mysqld_safe; a=\\\`pidof mysqld\\\`; if [ \\\"a\\\$a\\\" = \\\"a\\\" ]; then exit 10; fi; sleep 1; a=\\\`pidof mysqld\\\`; if [ \\\"a\\\$a\\\" = \\\"a\\\" ]; then exit 10; else exit 1; fi\"";
+  ( $high_ret, $low_ret ) = MHA::ManagerUtil::exec_system(
+    "ssh $ssh_user_host $MHA::ManagerConst::SSH_OPT_CHECK $command");
+  if ( $high_ret == $SSH_STOP_OK && $low_ret == 0 ) {
+    print "ssh reachable. mysqld stopped. power off not needed.\n";
+    return $high_ret;
+  }
+  else {
+    print
+      "ssh NOT reachable. Power off needed (rc1=$high_ret, rc2=$low_ret).\n";
+    return 1;
+  }
+}
+
+sub start {
+  my ( $real_host, $admin_addr, $server_type ) = @_;
+
+  my $power_status = "void";
+  if ( $server_type eq "ilo" ) {
+    $power_status = power_on_ilo($admin_addr);
+  }
+  elsif ( $server_type eq "drac" ) {
+    $power_status = power_on_drac($admin_addr);
+  }
+  if ( $power_status eq "on" ) {
+    print "Power of $real_host was successfully turned on.\n";
+    return 0;
+  }
+  elsif ( $power_status ne "off" ) {
+    return $COMMAND_NOT_SUPPORTED;
+  }
+
+  my $retry_count = 0;
+
+  while ( $power_status ne "on" && $retry_count < $max_retries ) {
+    $power_status = get_power_status( $admin_addr, $server_type );
+    last if ( $power_status eq "on" );
+    print
+"Waiting until power status becomes 'on'. Current status is $power_status ...\n";
+    sleep 3;
+    $retry_count++;
+  }
+
+  if ( $power_status eq "on" ) {
+    print "Power of $real_host was successfully turned on.\n";
+    return 0;
+  }
+  else {
+    print "Power of $real_host was not turned on. Check the host for detail.\n";
+    return 1;
+  }
+}
+
+sub status {
+  my ( $real_host, $admin_addr, $server_type ) = @_;
+  my $power_status = get_power_status( $admin_addr, $server_type );
+  print "Current power status on $real_host : $power_status\n";
+  if ( $power_status eq "on" ) {
+    return 0;
+  }
+  elsif ( $power_status eq "off" ) {
+    return 0;
+  }
+  else {
+    return $COMMAND_NOT_SUPPORTED;
+  }
+}
+
+# If ssh is reachable and mysqld process does not exist, exit with 2 and
+# do not power off. If ssh is not reachable, do power off and exit with 0
+# if successful. Otherwise exit with 1.
+sub main {
+
+  my ( $command, $ssh_user, $host, $ip, $port, $pid_file, $help );
+  GetOptions(
+    'command=s'  => \$command,
+    'ssh_user=s' => \$ssh_user,
+    'host=s'     => \$host,
+    'ip=s'       => \$ip,
+    'port=i'     => \$port,
+    'pid_file=s' => \$pid_file,
+    'help'       => \$help,
+  );
+
+  if ($help) {
+    pod2usage(0);
+  }
+
+  pod2usage(1) unless ($command);
+
+  my $rc            = 1;
+  my $ssh_stop_fail = 0;
+
+  if ( $command eq "stopssh" || $command eq "stopssh2" ) {
+    pod2usage(1) unless ($ssh_user);
+    pod2usage(1) unless ($host);
+    $rc = stopssh( $ssh_user, $host, $ip, $pid_file );
+    if ( $rc == $SSH_STOP_OK ) {
+      exit $rc;
+    }
+    else {
+      exit 1 if ( $command eq "stopssh2" );
+      $ssh_stop_fail = 1;
+    }
+  }
+
+  # Get server type (ilo/drac, etc) and administrative IP address.
+  my ( $admin_addr, $server_type ) = FIXME_xxx( $host, $ip );
+  if ( $command eq "start" ) {
+    $rc = start( $host, $admin_addr, $server_type );
+  }
+  elsif ( $command eq "stop" || $ssh_stop_fail ) {
+    $rc = stop( $host, $admin_addr, $server_type );
+  }
+  elsif ( $command eq "status" ) {
+    $rc = status( $host, $admin_addr, $server_type );
+  }
+  else {
+    pod2usage(1);
+  }
+
+  # Do other way to stop host
+  if ( $rc == $COMMAND_NOT_SUPPORTED ) {
+    $rc = FIXME_xxx( $command, $host, $ip );
+  }
+
+  if ( $rc == 0 ) {
+    exit 0;
+  }
+  else {
+    exit 1;
+  }
+}
+
+#############################################################################
+
+=head1 NAME
+
+Main purpose of this command is node fencing so that split brain never happens.
+
+=head1 SYNOPSIS
+
+# power off
+
+power_manager --command=stop --host=master_server
+
+# killing mysqld and mysqld_safe at first. If not successful, forcing power off
+
+power_manager --command=stopssh --host=master_server --ssh_user=root
+
+# killing mysqld and mysqld_safe. If not successful, just exit.
+
+power_manager --command=stopssh2 --host=master_server --ssh_user=root
+
+# killing mysqld with specified pid file. This is useful when you run multiple MySQL instances and want to stop only specified instance
+
+power_manager --command=stopssh --host=master_server --ssh_user=root --pid_file=/var/lib/mysql/mysqld.pid
+
+# power on
+
+power_manager --command=start --host=master_server
+
+# checking power status
+
+power_manager --command=status --host=master_server
+8、遇到问题
+
+[root@es3 bin]# masterha_check_repl --conf=/root/app1.cnf 
+Tue Aug 20 10:45:29 2019 - [warning] Global configuration file /etc/masterha_default.cnf not found. Skipping.
+Tue Aug 20 10:45:29 2019 - [info] Reading application default configuration from /root/app1.cnf..
+Tue Aug 20 10:45:29 2019 - [info] Reading server configuration from /root/app1.cnf..
+Tue Aug 20 10:45:29 2019 - [info] MHA::MasterMonitor version 0.58.
+Tue Aug 20 10:45:30 2019 - [info] GTID failover mode = 1
+Tue Aug 20 10:45:30 2019 - [info] Dead Servers:
+Tue Aug 20 10:45:30 2019 - [info] Alive Servers:
+Tue Aug 20 10:45:30 2019 - [info]   es1(192.168.56.14:3306)
+Tue Aug 20 10:45:30 2019 - [info]   es2(192.168.56.15:3306)
+Tue Aug 20 10:45:30 2019 - [info]   es3(192.168.56.16:3306)
+Tue Aug 20 10:45:30 2019 - [info] Alive Slaves:
+Tue Aug 20 10:45:30 2019 - [info]   es2(192.168.56.15:3306)  Version=5.7.24-log (oldest major version between slaves) log-bin:enabled
+Tue Aug 20 10:45:30 2019 - [info]     GTID ON
+Tue Aug 20 10:45:30 2019 - [info]     Replicating from 192.168.56.14(192.168.56.14:3306)
+Tue Aug 20 10:45:30 2019 - [info]   es3(192.168.56.16:3306)  Version=5.7.24-log (oldest major version between slaves) log-bin:enabled
+Tue Aug 20 10:45:30 2019 - [info]     GTID ON
+Tue Aug 20 10:45:30 2019 - [info]     Replicating from es1(192.168.56.14:3306)
+Tue Aug 20 10:45:30 2019 - [info] Current Alive Master: es1(192.168.56.14:3306)
+Tue Aug 20 10:45:30 2019 - [info] Checking slave configurations..
+Tue Aug 20 10:45:30 2019 - [info]  read_only=1 is not set on slave es2(192.168.56.15:3306).
+Tue Aug 20 10:45:30 2019 - [info]  read_only=1 is not set on slave es3(192.168.56.16:3306).
+Tue Aug 20 10:45:30 2019 - [info] Checking replication filtering settings..
+Tue Aug 20 10:45:30 2019 - [info]  binlog_do_db= , binlog_ignore_db= 
+Tue Aug 20 10:45:30 2019 - [info]  Replication filtering check ok.
+Tue Aug 20 10:45:30 2019 - [info] GTID (with auto-pos) is supported. Skipping all SSH and Node package checking.
+Tue Aug 20 10:45:30 2019 - [info] Checking SSH publickey authentication settings on the current master..
+Tue Aug 20 10:45:31 2019 - [info] HealthCheck: SSH to es1 is reachable.
+Tue Aug 20 10:45:31 2019 - [info] 
+es1(192.168.56.14:3306) (current master)
+ +--es2(192.168.56.15:3306)
+ +--es3(192.168.56.16:3306)
+
+Tue Aug 20 10:45:31 2019 - [info] Checking replication health on es2..
+Tue Aug 20 10:45:31 2019 - [info]  ok.
+Tue Aug 20 10:45:31 2019 - [info] Checking replication health on es3..
+Tue Aug 20 10:45:31 2019 - [info]  ok.
+Tue Aug 20 10:45:31 2019 - [info] Checking master_ip_failover_script status:
+Tue Aug 20 10:45:31 2019 - [info]   /usr/local/bin/master_ip_failover --command=status --ssh_user=root --orig_master_host=es1 --orig_master_ip=192.168.56.14 --orig_master_port=3306 
+/usr/local/bin/master_ip_failover:行3: use: 未找到命令
+/usr/local/bin/master_ip_failover:行4: use: 未找到命令
+/usr/local/bin/master_ip_failover:行6: use: 未找到命令
+/usr/local/bin/master_ip_failover:行8: 未预期的符号 `newline' 附近有语法错误
+/usr/local/bin/master_ip_failover:行8: `my ('
+Tue Aug 20 10:45:31 2019 - [error][/usr/share/perl5/vendor_perl/MHA/MasterMonitor.pm, ln229]  Failed to get master_ip_failover_script status with return code 2:0.
+Tue Aug 20 10:45:31 2019 - [error][/usr/share/perl5/vendor_perl/MHA/MasterMonitor.pm, ln427] Error happened on checking configurations.  at /usr/bin/masterha_check_repl line 48.
+Tue Aug 20 10:45:31 2019 - [error][/usr/share/perl5/vendor_perl/MHA/MasterMonitor.pm, ln525] Error happened on monitoring servers.
+Tue Aug 20 10:45:31 2019 - [info] Got exit code 1 (Not master dead).
+
+MySQL Replication Health is NOT OK!
+[root@es3 bin]#
+原因：文件多了一个空行，这个错误我犯了好多次，哎……
+
+        image.png
+
+image.png
+
+[root@es3 bin]# masterha_check_repl --conf=/root/app1.cnf 
+
+Tue Aug 20 10:49:24 2019 - [warning] Global configuration file /etc/masterha_default.cnf not found. Skipping.
+Tue Aug 20 10:49:24 2019 - [info] Reading application default configuration from /root/app1.cnf..
+Tue Aug 20 10:49:24 2019 - [info] Reading server configuration from /root/app1.cnf..
+Tue Aug 20 10:49:24 2019 - [info] MHA::MasterMonitor version 0.58.
+Tue Aug 20 10:49:25 2019 - [info] GTID failover mode = 1
+Tue Aug 20 10:49:25 2019 - [info] Dead Servers:
+Tue Aug 20 10:49:25 2019 - [info] Alive Servers:
+Tue Aug 20 10:49:25 2019 - [info]   es1(192.168.56.14:3306)
+Tue Aug 20 10:49:25 2019 - [info]   es2(192.168.56.15:3306)
+Tue Aug 20 10:49:25 2019 - [info]   es3(192.168.56.16:3306)
+Tue Aug 20 10:49:25 2019 - [info] Alive Slaves:
+Tue Aug 20 10:49:25 2019 - [info]   es2(192.168.56.15:3306)  Version=5.7.24-log (oldest major version between slaves) log-bin:enabled
+Tue Aug 20 10:49:25 2019 - [info]     GTID ON
+Tue Aug 20 10:49:25 2019 - [info]     Replicating from 192.168.56.14(192.168.56.14:3306)
+Tue Aug 20 10:49:25 2019 - [info]   es3(192.168.56.16:3306)  Version=5.7.24-log (oldest major version between slaves) log-bin:enabled
+Tue Aug 20 10:49:25 2019 - [info]     GTID ON
+Tue Aug 20 10:49:25 2019 - [info]     Replicating from es1(192.168.56.14:3306)
+Tue Aug 20 10:49:25 2019 - [info] Current Alive Master: es1(192.168.56.14:3306)
+Tue Aug 20 10:49:25 2019 - [info] Checking slave configurations..
+Tue Aug 20 10:49:25 2019 - [info]  read_only=1 is not set on slave es2(192.168.56.15:3306).
+Tue Aug 20 10:49:25 2019 - [info]  read_only=1 is not set on slave es3(192.168.56.16:3306).
+Tue Aug 20 10:49:25 2019 - [info] Checking replication filtering settings..
+Tue Aug 20 10:49:25 2019 - [info]  binlog_do_db= , binlog_ignore_db= 
+Tue Aug 20 10:49:25 2019 - [info]  Replication filtering check ok.
+Tue Aug 20 10:49:25 2019 - [info] GTID (with auto-pos) is supported. Skipping all SSH and Node package checking.
+Tue Aug 20 10:49:25 2019 - [info] Checking SSH publickey authentication settings on the current master..
+Tue Aug 20 10:49:26 2019 - [info] HealthCheck: SSH to es1 is reachable.
+Tue Aug 20 10:49:26 2019 - [info] 
+es1(192.168.56.14:3306) (current master)
+ +--es2(192.168.56.15:3306)
+ +--es3(192.168.56.16:3306)
+
+Tue Aug 20 10:49:26 2019 - [info] Checking replication health on es2..
+Tue Aug 20 10:49:26 2019 - [info]  ok.
+Tue Aug 20 10:49:26 2019 - [info] Checking replication health on es3..
+Tue Aug 20 10:49:26 2019 - [info]  ok.
+Tue Aug 20 10:49:26 2019 - [info] Checking master_ip_failover_script status:
+Tue Aug 20 10:49:26 2019 - [info]   /usr/local/bin/master_ip_failover --command=status --ssh_user=root --orig_master_host=es1 --orig_master_ip=192.168.56.14 --orig_master_port=3306 
+
+
+IN SCRIPT TEST====/sbin/ifconfig enp0s8:1 down==/sbin/ifconfig enp0s8:1 192.168.56.191/24===
+
+Checking the Status of the script.. OK 
+Tue Aug 20 10:49:26 2019 - [info]  OK.
+Tue Aug 20 10:49:26 2019 - [info] Checking shutdown script status:
+Tue Aug 20 10:49:26 2019 - [info]   /usr/local/bin/stop_report --command=status --ssh_user=root --host=es1 --ip=192.168.56.14 
+Tue Aug 20 10:49:26 2019 - [info]  OK.
+Tue Aug 20 10:49:26 2019 - [info] Got exit code 0 (Not master dead).
+
+MySQL Replication Health is OK.
+[root@es3 bin]#
+```
