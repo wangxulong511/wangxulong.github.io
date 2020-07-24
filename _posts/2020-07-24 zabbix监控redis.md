@@ -6,7 +6,7 @@
 #!/bin/bash
 REDISPATH="/usr/local/bin/redis-cli"
 HOST="127.0.0.1"
-PORT="6379"
+PORT=($(sudo netstat -tpln | awk -F "[ :]+" '/redis/ && /0.0.0.0/ {print $5}'))
 REDIS_PA="$REDISPATH -h $HOST -p $PORT info"
 if [[ $# == 1 ]];then
     case $1 in
