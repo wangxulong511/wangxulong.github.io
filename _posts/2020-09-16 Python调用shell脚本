@@ -1,0 +1,21 @@
+# Python 运行 shell
+```
+1. 使用os.system返回执行状态值
+
+os.system("The command you want").
+
+这个调用相当直接，且是同步进行的，程序需要阻塞并等待返回。返回值是依赖于系统的，直接返回系统的调用返回值，所以windows和linux是不一样的。
+
+2.使用内置模块 subprocess 推荐方式可以获取到shell命令执行后的结果
+ sub = subprocess.Popen("ps aux | grep python | grep -v grep| awk '{print $2}'", shell=True,stdout=subprocess.PIPE)
+ sub.wait()
+ sub.stdout.read()
+ 
+3、os.popen
+os.popen(command[,mode[,bufsize]])
+
+可以看出，popen方法通过p.read()获取终端输出，而且popen需要关闭close().当执行成功时，close()不返回任何值，失败时，close()返回系统返回值. 可见它获取返回值的方式和os.system不同。
+
+4、使用commands模块
+根据你需要的不同，commands模块有三个方法可供选择。getstatusoutput, getoutput, getstatus。
+```
