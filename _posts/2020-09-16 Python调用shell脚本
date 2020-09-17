@@ -1,4 +1,6 @@
 # Python 运行 shell
+## Python调用shell命令常用方法
+> https://www.cnblogs.com/pengpp/p/9833349.html
 ```
 1. 使用os.system返回执行状态值
 
