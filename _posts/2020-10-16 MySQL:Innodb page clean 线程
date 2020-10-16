@@ -1,0 +1,18 @@
+# MySQL:Innodb page clean 线程
+
+## MySQL:Innodb page clean 线程 (一) 基础
+> http://blog.itpub.net/7728585/viewspace-2157988/
+
+## MySQL:Innodb page clean 线程 (二) 解析
+> http://blog.itpub.net/7728585/viewspace-2157990/
+
+MySQL errorlog日志信息出现如下内容：说明服务器磁盘IO不力
+```
+2020-10-16T00:29:15.861833Z 0 [Note] InnoDB: page_cleaner: 1000ms intended loop took 4413ms. The settings might not be optimal. (flushed=201 and evicted=0, during the 
+time.)
+...
+2020-10-15T22:00:39.918558Z 0 [Note] InnoDB: page_cleaner: 1000ms intended loop took 4199ms. The settings might not be optimal. (flushed=11 and evicted=0, during the time.)
+...
+2020-10-16T00:29:15.861833Z 0 [Note] InnoDB: page_cleaner: 1000ms intended loop took 4413ms. The settings might not be optimal. (flushed=201 and evicted=0, during the time.)
+```
+
